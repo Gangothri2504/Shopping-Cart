@@ -1,0 +1,109 @@
+﻿create table Registration(UserId int identity(1,1) primary key,[Name] varchar(30) not null,Username varchar(40) not null unique,
+[Password] varchar(20)not null,ConfirmPassword varchar(20),MobileNumber varchar(20)not null)
+
+
+insert into Registration([Name],Username,[Password],ConfirmPassword,MobileNumber)
+values('Gangothri','gangu@123','2504','2504','9876543210'),
+('Divya','divya@345','123','123','6473729343'),
+('Shivani','shiv@987','456','456','7836592957'),
+('Shravya','shravs@231','1304','1304','4729738374'),
+('Siri','siri@890','0410','0410','6472836282')
+
+select * from Registration
+
+create table Products(ProductId int identity(1,1) primary key,ProductName varchar(20) not null,Price int not null,Quantity int not null)
+
+insert into Products(ProductName,Price,Quantity)
+values('Oneplus',65000,4),
+('Iphone',75000,3),
+('Oppo',20000,2),
+('Vivo',23000,3),
+('Samsung',50000,2)
+
+update products set Quantity=50
+
+select * from Products
+
+create table Cart(CartId int identity(1,1) primary key,ProductId int not null foreign key references Products(ProductId),
+ProductName varchar(20) not null,username varchar(40) not null foreign key references Registration(Username),FinalPrice int not null)
+
+select * from Registration
+select * from Products
+select * from Cart
+
+--actual
+
+alter procedure ShoppingCart
+    @ActionType nvarchar(50),
+    @Username nvarchar(50),
+    @Password nvarchar(50) = NULL,  
+    @ProductID int = NULL,     
+    @Quantity int = NULL,
+	@TotalPrice int = NULL
+  
+as
+begin
+    if @ActionType = 'Login'
+    begin
+        declare @LoginCount int;
+
+        select @LoginCount = count(*)
+        from Registration
+        where Username = @Username and [Password] = @Password;
+
+        if @LoginCount > 0
+            select 'Login Successful';
+        else
+            select 'Invalid Login';
+    end
+    else if @ActionType = 'AddToCart'
+    begin
+	if not exists (select 1 from Products where ProductID = @ProductID)
+    begin
+        select 'Invalid ProductID';
+        return;
+    end
+        declare @ProductName nvarchar(50);
+        declare @AvailableQty int;
+		declare @Price int;
+        --declare @Price DECIMAL(18,2);
+
+        select @ProductName = ProductName, @AvailableQty = Quantity, @Price = Price
+        from Products
+        where ProductID = @ProductID;
+
+        if @Quantity > @AvailableQty
+        begin
+			select 'Insufficient stock'
+            --raiserror('Insufficient stock', 16, 1);
+            return;
+        end
+
+        update Products
+        set Quantity = Quantity - @Quantity
+        where ProductID = @ProductID;
+
+        insert into Cart (ProductID, ProductName, Username, FinalPrice)
+        values (@ProductID, @ProductName, @Username, @TotalPrice);
+
+        select 'Product added to cart successfully';
+    end
+
+    else if @ActionType = 'GetCart'
+    begin
+        select CartID, ProductID, ProductName, FinalPrice
+        from Cart
+        where Username = @Username
+        order by CartID;
+    end
+
+    else
+    begin
+        select 'Invalid ActionType';
+    end
+end
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------
+
+
